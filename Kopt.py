@@ -50,7 +50,7 @@ def two_opt(distance_matrix,n, start=0):
             if improved:
                 break
 
-    return route, best_cost
+    return [int(x) for x in route], float(best_cost)
 
 
 
@@ -103,7 +103,7 @@ def two_opt_min_time(time_matrix,n, start=0):
             if improved:
                 break
 
-    return route, best_time
+    return [int(x) for x in route], float(best_time)
 
 
 
@@ -175,4 +175,4 @@ def two_opt_max_speed(distance_matrix, time_matrix,n, start=0):
             if improved:
                 break
 
-    return route, best_speed, best_dist, best_time
+    return [int(x) for x in route], float(best_speed), float(best_dist), float(best_time)

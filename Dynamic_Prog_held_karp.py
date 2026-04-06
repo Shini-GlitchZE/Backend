@@ -62,7 +62,7 @@ def held_karp(distance,n):
     route.append(0)
     route.reverse()
 
-    return route, min_cost
+    return [int(x) for x in route], float(min_cost)
 
 
 
@@ -139,7 +139,7 @@ def held_karp_min_time(time_matrix,n):
     route.append(0)
     route.reverse()
 
-    return route, min_time
+    return [int(x) for x in route], float(min_time)
 
 
 
@@ -249,4 +249,4 @@ def held_karp_max_speed(distance_matrix, time_matrix,n):
     route.append(0)
     route.reverse()
 
-    return route, max_speed, best_total[0], best_total[1]
+    return [int(x) for x in route], float(max_speed), float(best_total[0]), float(best_total[1])

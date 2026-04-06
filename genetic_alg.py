@@ -116,7 +116,7 @@ def genetic_algorithm_tsp(distance_matrix, n,
 
         # print(f"Generation {gen+1} | Best Distance: {best_cost}")
 
-    return best_route, best_cost
+    return [int(x) for x in best_route], float(best_cost)
 
 
 # -----------------------------
@@ -236,7 +236,7 @@ def genetic_algorithm_min_time(time_matrix, n,
 
         # print(f"Generation {gen+1} | Best Time: {best_time}")
 
-    return best_route, best_time
+    return [int(x) for x in best_route], float(best_time)
 
 
 
@@ -378,4 +378,4 @@ def genetic_algorithm_max_speed(distance_matrix,
 
         # print(f"Generation {gen+1} | Best Speed: {best_speed:.4f}")
 
-    return best_route, best_speed, best_dist, best_time
+    return [int(x) for x in best_route], float(best_speed), float(best_dist), float(best_time)

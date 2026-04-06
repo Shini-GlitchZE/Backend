@@ -61,7 +61,7 @@ def nearest_insertion_tsp(distance_matrix,n, start=0):
     for i in range(len(route) - 1):
         total_cost += distance_matrix[route[i], route[i+1]]
 
-    return route, total_cost
+    return [int(x) for x in route], float(total_cost)
 
 
 
@@ -126,7 +126,7 @@ def nearest_insertion_min_time(time_matrix,n, start=0):
     for i in range(len(route) - 1):
         total_time += time_matrix[route[i], route[i+1]]
 
-    return route, total_time
+    return [int(x) for x in route], float(total_time)
 
 
 
@@ -217,4 +217,4 @@ def insertion_max_avg_speed(distance_matrix, time_matrix,n, start=0):
 
     avg_speed = total_distance / (total_time + 1e-10)
 
-    return route, avg_speed, total_distance, total_time
+    return [int(x) for x in route], float(avg_speed), float(total_distance), float(total_time)

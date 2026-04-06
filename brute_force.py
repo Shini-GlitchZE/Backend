@@ -18,7 +18,7 @@ def Brute_force_alg(Adjacency_matrix,n):
             minimum = cost
             best_route = (0,) + permutation + (0,)
 
-    return best_route, minimum
+    return [int(x) for x in best_route], float(minimum)
 
 
 def brute_force_min_time(time_matrix, n):
@@ -57,7 +57,7 @@ def brute_force_min_time(time_matrix, n):
             minimum_time = total_time
             best_route = (0,) + permutation + (0,)
 
-    return best_route, minimum_time
+    return [int(x) for x in best_route], float(minimum_time)
 
 
 
@@ -112,5 +112,5 @@ def brute_force_max_speed(distance_matrix, time_matrix, n):
             best_distance = total_distance
             best_time = total_time
 
-    return best_route, max_speed, best_distance, best_time
+    return [int(x) for x in best_route], float(max_speed), float(best_distance), float(best_time)
 

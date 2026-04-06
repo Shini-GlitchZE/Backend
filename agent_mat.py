@@ -11,10 +11,12 @@ def get_agent_delivery_matrix(
     routing_preference="TRAFFIC_AWARE",
     max_elements_per_minute=3000
 ):
-    api_key = ""   # 🔴 Put your key here
+    api_key = "AIzaSyBcAMogU9a6TN8VVF-N2Y8-Bv1S7hSGXCM"   # 🔴 Put your key here
     if not api_key:
         raise ValueError("Google API key is missing.")
 
+    agents_np = np.array(agents_np)
+    deliveries_np = np.array(deliveries_np)
     A = agents_np.shape[0]
     D = deliveries_np.shape[0]
 
@@ -33,7 +35,7 @@ def get_agent_delivery_matrix(
         "X-Goog-Api-Key": api_key,
         "X-Goog-FieldMask": "originIndex,destinationIndex,distanceMeters,duration"
     }
-
+    print("API called")
     distance_matrix = np.zeros((A, D))
     time_matrix = np.zeros((A, D))
 

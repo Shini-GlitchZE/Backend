@@ -10,7 +10,7 @@ def get_distance_time_matrix_routes_batched(
     routing_preference="TRAFFIC_AWARE_OPTIMAL",
     max_elements_per_minute=3000
 ):
-    api_key = ""   # 🔴 Put your key here
+    api_key = "AIzaSyBcAMogU9a6TN8VVF-N2Y8-Bv1S7hSGXCM"   # 🔴 Put your key here
     if not api_key:
         raise ValueError("Google API key is missing.")
 

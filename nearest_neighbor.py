@@ -36,7 +36,7 @@ def nearest_neighbor_tsp(distance_matrix,n, start=0):
     total_cost += distance_matrix[current, start]
     route.append(start)
 
-    return route, total_cost
+    return [int(x) for x in route], float(total_cost)
 '''n=21
 arr=np.zeros((n,n))
 
@@ -101,7 +101,7 @@ def nearest_neighbor_tsp_max_speed(distance_matrix, time_matrix,n,start=0):
     # Compute overall average speed
     average_speed = total_distance / total_time if total_time > 0 else 0
 
-    return route, average_speed
+    return [int(x) for x in route], float(average_speed)
 
 
 def nearest_neighbor_min_time(time_matrix,n,start=0):
@@ -148,4 +148,4 @@ def nearest_neighbor_min_time(time_matrix,n,start=0):
     total_time += time_matrix[current, start]
     route.append(start)
 
-    return route, total_time
+    return [int(x) for x in route], float(total_time)

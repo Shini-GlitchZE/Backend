@@ -1,7 +1,7 @@
 import requests
 import numpy as np
 
-GOOGLE_API_KEY = ""
+GOOGLE_API_KEY = "AIzaSyBcAMogU9a6TN8VVF-N2Y8-Bv1S7hSGXCM"
 
 def get_distance_time_matrix_routes(locations_np):
     """
@@ -40,7 +40,7 @@ def get_distance_time_matrix_routes(locations_np):
         "origins": origins,
         "destinations": origins,   # full adjacency matrix
         "travelMode": "DRIVE",
-        "routingPreference": "TRAFFIC_AWARE_OPTIMAL"
+        "routingPreference": "TRAFFIC_AWARE"
     }
 
     response = requests.post(url, headers=headers, json=payload)

@@ -16,6 +16,7 @@ import ant_colony_optimization
 import insertion_alg
 import Kopt
 import genetic_alg
+import integer_programming
 
 import os
 import hashlib
@@ -54,15 +55,19 @@ def get_distance_time_matrix(locations):
 
         try:
             if n <= 10:
+                print("warning")
                 dist, times = Distance_Matrix_API.get_distance_time_matrix(locations)
 
             elif n <= 15:
+                print("warning")
                 dist, times = Distance_Matrix_API.get_distance_time_matrix_all(locations)
 
             elif n <= 25:
+                print("warning")
                 dist, times = Route_Matrix_Api.get_distance_time_matrix_routes(np.array(locations))
 
             else:
+                print("warning")
                 dist, times = route_matrix.get_distance_time_matrix_routes_batched(np.array(locations))
 
             dist = np.array(dist)
@@ -99,78 +104,115 @@ def get_distance_time_matrix(locations):
 # ------------------------------------------------
 if __name__ == "__main__":
 
-    dataset_path = r"C:\Users\velch\Desktop\delivery_dataset.csv"
+    dataset_path = r"C:\Users\velch\Downloads\apitest.csv"
 
+    # Load data
     agents, deliveries = load_csv_dataset(dataset_path)
 
-    print("Agents:", len(agents))
-    print("Deliveries:", len(deliveries))
+    print(f"\n Agents: {len(agents)}")
+    print(f" Deliveries: {len(deliveries)}")
 
-    distance_matrix = build_distance_matrix(agents, deliveries)
-    # distance_matrix = agent_mat.get_agent_delivery_matrix(agents, deliveries)
+    # Safety check
+    if len(agents) == 0 or len(deliveries) == 0:
+        raise ValueError("Dataset is empty or not loaded correctly.")
 
+    # Build distance matrix
+    agents_np = np.array([[a["lat"], a["lng"]] for a in agents])
+    deliveries_np = np.array([[d["lat"], d["lng"]] for d in deliveries])
+    
+    # Caching logic for global agent-delivery matrix
+    global_key = str(agents_np.tolist()) + str(deliveries_np.tolist())
+    global_hash = hashlib.md5(global_key.encode()).hexdigest()
+    global_dist_file = f"global_mat_{global_hash}_dist.csv"
+    global_time_file = f"global_mat_{global_hash}_time.csv"
+    
+    if os.path.exists(global_dist_file) and os.path.exists(global_time_file):
+        print("Loading global assignment matrix from CSV (cache hit)")
+        distance_matrix_np = np.loadtxt(global_dist_file, delimiter=",")
+        time_matrix = np.loadtxt(global_time_file, delimiter=",")
+    else:
+        print("Calling API for global assignment matrix (cache miss)")
+        distance_matrix_np, time_matrix = agent_mat.get_agent_delivery_matrix(agents_np, deliveries_np)
+        np.savetxt(global_dist_file, distance_matrix_np, delimiter=",", fmt="%d")
+        np.savetxt(global_time_file, time_matrix, delimiter=",", fmt="%d")
+        print("Saved global assignment matrices to CSV")
+    
+    distance_matrix = {}
+    for i, a in enumerate(agents):
+        for j, d in enumerate(deliveries):
+            distance_matrix[(a["id"], d["id"])] = distance_matrix_np[i, j]
+
+    # Capacity logic
     max_capacity = len(deliveries) // len(agents) + 2
-    print("Max capacity per agent:", max_capacity)
+    print(f" Max capacity per agent: {max_capacity}")
 
-    # ------------------------------------------------
-    # ASSIGNMENT STEP
-    # ------------------------------------------------
+    #  Adaptive Algorithm Selection
     if len(deliveries) <= 150:
-
-        print("Small dataset -> running Greedy + MCMF")
+        print("\n[FAST] Small dataset -> Running MCMF + Greedy")
 
         greedy_result = incremental_cost_greedy(
             agents, deliveries, distance_matrix
         )
-
         greedy_metrics = calculate_metrics(greedy_result, distance_matrix)
 
         mcmf_result = minimum_cost_max_flow_assignment(
-            agents,
-            deliveries,
-            distance_matrix,
-            max_capacity
+            agents, deliveries, distance_matrix, max_capacity
         )
-
         mcmf_metrics = calculate_metrics(mcmf_result, distance_matrix)
 
-        greedy_score = greedy_metrics["total_distance"] + (
-            greedy_metrics["load_std_dev"] * 10
-        )
-
-        mcmf_score = mcmf_metrics["total_distance"] + (
-            mcmf_metrics["load_std_dev"] * 10
-        )
+        greedy_score = greedy_metrics["total_distance"] + (greedy_metrics["load_std_dev"] * 10)
+        mcmf_score = mcmf_metrics["total_distance"] + (mcmf_metrics["load_std_dev"] * 10)
 
         if mcmf_score < greedy_score:
             final_result = mcmf_result
+            final_metrics = mcmf_metrics
             selected_algo = "MCMF"
         else:
             final_result = greedy_result
+            final_metrics = greedy_metrics
             selected_algo = "Greedy"
 
     else:
-
-        print("Large dataset -> using Greedy only")
+        print("\n[FAST] Large dataset -> Using Greedy (optimized)")
 
         final_result = incremental_cost_greedy(
-            agents,
-            deliveries,
-            distance_matrix
+            agents, deliveries, distance_matrix
         )
-
+        final_metrics = calculate_metrics(final_result, distance_matrix)
         selected_algo = "Greedy"
 
-    print("\nSelected Algorithm:", selected_algo)
+    #  RESULTS OUTPUT
+    print(f"\n Selected Algorithm: {selected_algo}")
 
-    # ------------------------------------------------
-    # PRINT ASSIGNMENT
-    # ------------------------------------------------
+    print("\n DELIVERY DISTRIBUTION:\n")
+
+    total_assigned = 0
+
     for agent_id in sorted(final_result.keys()):
-        print("Agent", agent_id, "->", len(final_result[agent_id]), "deliveries")
+        assigned = final_result[agent_id]
+        count = len(assigned)
+        total_assigned += count
 
-    total_assigned = sum(len(v) for v in final_result.values())
-    print("Total Assigned Deliveries:", total_assigned)
+        # Show preview only (clean output)
+        preview = assigned[:5]
+
+        print(f" AGENT {agent_id:<5} : {count:>3} DELIVERIES")
+        print(f"  Sample: {preview} {'...' if count > 5 else ''}")
+
+    print(f"\n TOTAL ASSIGNED DELIVERIES: {total_assigned}")
+
+    # 📊 LOAD ANALYSIS
+    loads = [len(v) for v in final_result.values()]
+
+    print("\n LOAD ANALYSIS:")
+    print(f"   Max Load : {max(loads)}")
+    print(f"   Min Load : {min(loads)}")
+    print(f"   Avg Load : {sum(loads)/len(loads):.2f}")
+
+    #  PERFORMANCE METRICS
+    print("\n PERFORMANCE METRICS:")
+    print(f"   Total Distance : {final_metrics['total_distance']:.2f}")
+    print(f"   Load Std Dev   : {final_metrics['load_std_dev']:.2f}")
 
     export_assignments_to_csv(final_result, deliveries)
 
@@ -196,34 +238,37 @@ if __name__ == "__main__":
 
         n = len(locations)
 
-        print("Distance Matrix:\n", dist)
-        print("Time Matrix:\n", times)
+       # print("Distance Matrix:\n", dist)
+        #print("Time Matrix:\n", times)
 
         # ------------------------------------------------
         # RUN TSP ALGORITHMS
         # ------------------------------------------------
+        def map_r(res):
+            if res is None or res[0] is None: return res
+            return ([assigned_delivery_ids[i] for i in res[0]],) + res[1:]
 
-        if n <= 10:
+        if n <= 8:
 
             print("\nBrute Force")
             start = time.perf_counter()
 
-            print("Min Distance:", brute_force.Brute_force_alg(dist, n))
-            print("Min Time:", brute_force.brute_force_min_time(times, n))
-            print("Max Speed:", brute_force.brute_force_max_speed(dist, times, n))
+            print("Min Distance:", map_r(brute_force.Brute_force_alg(dist, n)))
+            print("Min Time:", map_r(brute_force.brute_force_min_time(times, n)))
+            print("Max Speed:", map_r(brute_force.brute_force_max_speed(dist, times, n)))
 
             end = time.perf_counter()
             print("Execution Time:", end - start)
 
-        if n <= 20:
+        if n <= 15:
 
             print("\nDynamic Programming Held-Karp")
 
             start = time.perf_counter()
 
-            print("Min Distance:", Dynamic_Prog_held_karp.held_karp(dist, n))
-            print("Min Time:", Dynamic_Prog_held_karp.held_karp_min_time(times, n))
-            print("Max Speed:", Dynamic_Prog_held_karp.held_karp_max_speed(dist, times, n))
+            print("Min Distance:", map_r(Dynamic_Prog_held_karp.held_karp(dist, n)))
+            print("Min Time:", map_r(Dynamic_Prog_held_karp.held_karp_min_time(times, n)))
+            print("Max Speed:", map_r(Dynamic_Prog_held_karp.held_karp_max_speed(dist, times, n)))
 
             end = time.perf_counter()
             print("Execution Time:", end - start)
@@ -232,9 +277,9 @@ if __name__ == "__main__":
 
         start = time.perf_counter()
 
-        print(nearest_neighbor.nearest_neighbor_tsp(dist, n))
-        print(nearest_neighbor.nearest_neighbor_min_time(times, n))
-        print(nearest_neighbor.nearest_neighbor_tsp_max_speed(dist, times, n))
+        print(map_r(nearest_neighbor.nearest_neighbor_tsp(dist, n)))
+        print(map_r(nearest_neighbor.nearest_neighbor_min_time(times, n)))
+        print(map_r(nearest_neighbor.nearest_neighbor_tsp_max_speed(dist, times, n)))
 
         end = time.perf_counter()
         print("Execution Time:", end - start)
@@ -243,9 +288,9 @@ if __name__ == "__main__":
 
         start = time.perf_counter()
 
-        print(ant_colony_optimization.ant_colony_optimization(dist, n))
-        print(ant_colony_optimization.ant_colony_min_time(times, n))
-        print(ant_colony_optimization.ant_colony_max_avg_speed(dist, times, n))
+        print(map_r(ant_colony_optimization.ant_colony_optimization(dist, n)))
+        print(map_r(ant_colony_optimization.ant_colony_min_time(times, n)))
+        print(map_r(ant_colony_optimization.ant_colony_max_avg_speed(dist, times, n)))
 
         end = time.perf_counter()
         print("Execution Time:", end - start)
@@ -254,9 +299,9 @@ if __name__ == "__main__":
 
         start = time.perf_counter()
 
-        print(insertion_alg.nearest_insertion_tsp(dist, n))
-        print(insertion_alg.nearest_insertion_min_time(times, n))
-        print(insertion_alg.insertion_max_avg_speed(dist, times, n))
+        print(map_r(insertion_alg.nearest_insertion_tsp(dist, n)))
+        print(map_r(insertion_alg.nearest_insertion_min_time(times, n)))
+        print(map_r(insertion_alg.insertion_max_avg_speed(dist, times, n)))
 
         end = time.perf_counter()
         print("Execution Time:", end - start)
@@ -265,9 +310,9 @@ if __name__ == "__main__":
 
         start = time.perf_counter()
 
-        print(Kopt.two_opt(dist, n))
-        print(Kopt.two_opt_min_time(times, n))
-        print(Kopt.two_opt_max_speed(dist, times, n))
+        print(map_r(Kopt.two_opt(dist, n)))
+        print(map_r(Kopt.two_opt_min_time(times, n)))
+        print(map_r(Kopt.two_opt_max_speed(dist, times, n)))
 
         end = time.perf_counter()
         print("Execution Time:", end - start)
@@ -276,9 +321,41 @@ if __name__ == "__main__":
 
         start = time.perf_counter()
 
-        print(genetic_alg.genetic_algorithm_tsp(dist, n))
-        print(genetic_alg.genetic_algorithm_min_time(times, n))
-        print(genetic_alg.genetic_algorithm_max_speed(dist, times, n))
+        print(map_r(genetic_alg.genetic_algorithm_tsp(dist, n)))
+        print(map_r(genetic_alg.genetic_algorithm_min_time(times, n)))
+        print(map_r(genetic_alg.genetic_algorithm_max_speed(dist, times, n)))
 
         end = time.perf_counter()
         print("Execution Time:", end - start)
+
+        '''print("\nInteger Linear Programming (MTZ Optimal)")
+
+        start = time.perf_counter()
+
+        # ILP – Minimum Distance
+        ilp_dist = integer_programming.ilp_min_distance(dist, n)
+        if ilp_dist[0] is None:
+            # fallback to genetic algorithm (good heuristic)
+            fallback = genetic_alg.genetic_algorithm_tsp(dist, n)
+            print("ILP (Min Distance) timed out – using Genetic Algo:", map_r(fallback))
+        else:
+            print("Min Distance (ILP):", map_r(ilp_dist))
+
+        # ILP – Minimum Time
+        ilp_time = integer_programming.ilp_min_time(times, n)
+        if ilp_time[0] is None:
+            fallback = genetic_alg.genetic_algorithm_min_time(times, n)
+            print("ILP (Min Time) timed out – using Genetic Algo:", map_r(fallback))
+        else:
+            print("Min Time (ILP):", map_r(ilp_time))
+
+        # ILP – Max Speed (average speed)
+        ilp_speed = integer_programming.ilp_max_speed(dist, times, n)
+        if ilp_speed[0] is None:
+            fallback = genetic_alg.genetic_algorithm_max_speed(dist, times, n)
+            print("ILP (Max Speed) timed out – using Genetic Algo:", map_r(fallback))
+        else:
+            print("Max Speed (ILP):", map_r(ilp_speed))
+
+        end = time.perf_counter()
+        print("Execution Time:", end - start)'''

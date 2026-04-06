@@ -30,7 +30,7 @@ def ant_colony_optimization(distance_matrix,n,
     pheromone = np.ones((n, n))
 
     # Heuristic information (1/distance)
-    heuristic = 1 / (distance_matrix + np.eye(n))
+    heuristic = 1 / (distance_matrix + 1e-10)
 
     best_route = None
     best_distance = float('inf')
@@ -88,7 +88,7 @@ def ant_colony_optimization(distance_matrix,n,
             for i in range(n):
                 pheromone[route[i]][route[i+1]] += Q / distance
 
-    return best_route, best_distance
+    return [int(x) for x in best_route], float(best_distance)
 
 
 
@@ -121,7 +121,7 @@ def ant_colony_min_time(time_matrix,n,
     pheromone = np.ones((n, n))
 
     # Heuristic information (inverse of time)
-    heuristic = 1 / (time_matrix + np.eye(n))  # avoid division by zero
+    heuristic = 1 / (time_matrix + 1e-10)  # safely avoid division by zero everywhere
 
     best_route = None
     best_time = float('inf')
@@ -184,7 +184,7 @@ def ant_colony_min_time(time_matrix,n,
             for i in range(n):
                 pheromone[route[i]][route[i+1]] += Q / time
 
-    return best_route, best_time
+    return [int(x) for x in best_route], float(best_time)
 
 
 
@@ -278,4 +278,4 @@ def ant_colony_max_avg_speed(distance_matrix, time_matrix,n,
             for i in range(len(route) - 1):
                 pheromone[route[i], route[i+1]] += Q * avg_speed
 
-    return best_route, best_avg_speed
+    return [int(x) for x in best_route], float(best_avg_speed)

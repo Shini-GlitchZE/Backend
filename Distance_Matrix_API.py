@@ -2,7 +2,7 @@ import requests
 import numpy as np
 
 # Hard-coded Google API key (for testing only)
-GOOGLE_API_KEY = ""
+GOOGLE_API_KEY = "AIzaSyBcAMogU9a6TN8VVF-N2Y8-Bv1S7hSGXCM"
 
 def get_distance_time_matrix(locations):
     """
